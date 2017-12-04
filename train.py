@@ -30,6 +30,7 @@ import tensorflow as tf
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
+#insert incl directory at the first position
 sys.path.insert(1, os.path.realpath('incl'))
 
 import tensorvision.train as train
@@ -41,7 +42,7 @@ import tensorflow_fcn
 import time
 
 import random
-
+#define string flags
 flags.DEFINE_string('name', None,
                     'Append a name Tag to run.')
 
@@ -59,14 +60,15 @@ tf.app.flags.DEFINE_boolean(
                    'output will be saved to the folder TV_DIR_RUNS/debug, '
                    'hence it will get overwritten by further runs.'))
 
-
+#function to print the training status
 def _print_training_status(hypes, step, loss_values, start_time, lr):
 
     # Prepare printing
     duration = (time.time() - start_time) / int(utils.cfg.step_show)
+    #get the batch size from the hypes to get the timing
     examples_per_sec = hypes['solver']['batch_size'] / duration
     sec_per_batch = float(duration)
-
+    #if loss values are less than two cast the error message
     if len(loss_values.keys()) >= 2:
         info_str = ('Step {step}/{total_steps}: losses = ({loss_value1:.2f}, '
                     '{loss_value2:.2f});'
@@ -85,41 +87,41 @@ def _print_training_status(hypes, step, loss_values, start_time, lr):
     else:
         assert(False)
 
-
+#function to build the training graph
 def build_training_graph(hypes, queue, modules, first_iter):
-    """
-    Build the tensorflow graph out of the model files.
+    #Build the tensorflow graph out of the model files.
 
-    Parameters
-    ----------
-    hypes : dict
-        Hyperparameters
-    queue: tf.queue
-        Data Queue
-    modules : tuple
-        The modules load in utils.
+    #Parameters
+    #----------
+    #hypes : dict
+    #    Hyperparameters
+    #queue: tf.queue
+    #    Data Queue
+    #modules : tuple
+    #    The modules load in utils.
 
-    Returns
-    -------
-    tuple
-        (q, train_op, loss, eval_lists) where
-        q is a dict with keys 'train' and 'val' which includes queues,
-        train_op is a tensorflow op,
-        loss is a float,
-        eval_lists is a dict with keys 'train' and 'val'
-    """
-
-    data_input = modules['input']
-    encoder = modules['arch']
+    #Returns
+    #-------
+    #tuple
+    #    (q, train_op, loss, eval_lists) where
+    #    q is a dict with keys 'train' and 'val' which includes queues,
+    #    train_op is a tensorflow op,
+    #    loss is a float,
+    #    eval_lists is a dict with keys 'train' and 'val'
+    
+    
+    #get the appropriate modules from hypes
+    data_input = modules['input'] #input directory
+    encoder = modules['arch'] #architecture
     objective = modules['objective']
-    optimizer = modules['solver']
+    optimizer = modules['solver'] #max steps, batch sizes and etc
 
     reuse = {True: False, False: True}[first_iter]
-
+    #Returns the current variable scope.
     scope = tf.get_variable_scope()
-
+    #variable created here will be named as currentvariable and variables are not shared
     with tf.variable_scope(scope, reuse=reuse):
-
+        #returns the tensor that may be used as handle for feeding a value
         learning_rate = tf.placeholder(tf.float32)
 
         # Add Input Producers to the Graph
@@ -161,33 +163,37 @@ def build_training_graph(hypes, queue, modules, first_iter):
 
     return graph
 
-
+#function to run the training of multinet model
 def run_united_training(meta_hypes, subhypes, submodules, subgraph, tv_sess,
                         start_step=0):
 
     """Run one iteration of training."""
     # Unpack operations for later use
     summary = tf.Summary()
+    #using the context manager launch the graph in session
     sess = tv_sess['sess']
     summary_writer = tv_sess['writer']
 
     solvers = {}
     for model in meta_hypes['models']:
         solvers[model] = submodules[model]['solver']
-
+    #get the values from the hypes
     display_iter = meta_hypes['logging']['display_iter']
     write_iter = meta_hypes['logging'].get('write_iter', 5*display_iter)
     eval_iter = meta_hypes['logging']['eval_iter']
     save_iter = meta_hypes['logging']['save_iter']
     image_iter = meta_hypes['logging'].get('image_iter', 5*save_iter)
-
+    
     models = meta_hypes['model_list']
+    #get the number of models
     num_models = len(models)
 
     py_smoothers = {}
     dict_smoothers = {}
     for model in models:
+        #smoothing pitch contours
         py_smoothers[model] = train.MedianSmoother(5)
+        #exponetial smoothing to remove noises
         dict_smoothers[model] = train.ExpoSmoother(0.95)
 
     n = 0
@@ -243,14 +249,16 @@ def run_united_training(meta_hypes, subhypes, submodules, subgraph, tv_sess,
                                               ['total_loss'])
 
                 eval_results[model] = sess.run(eval_ops[model])
+                #update the weights of the model
                 dict_smoothers[model].update_weights(eval_results[model])
+                #get the learning rate for the iteration of the model
                 lrs[model] = solvers[model].get_learning_rate(subhypes[model],
                                                               step)
-
+            #call the function to print the training status
             _print_training_status(meta_hypes, step,
                                    loss_values,
                                    start_time, lrs)
-
+            #print evaluation result for each of the models
             for model in models:
                 train._print_eval_dict(eval_names[model], eval_results[model],
                                        prefix='   (raw)')
@@ -261,7 +269,7 @@ def run_united_training(meta_hypes, subhypes, submodules, subgraph, tv_sess,
                                        prefix='(smooth)')
 
             output = sess.run(subgraph['debug_ops'].values())
-
+            
             for name, res in zip(subgraph['debug_ops'].keys(), output):
                 logging.info("{} : {}".format(name, res))
 
@@ -297,7 +305,6 @@ def run_united_training(meta_hypes, subhypes, submodules, subgraph, tv_sess,
         if (step) % eval_iter == 0 and step > 0 or \
            (step + 1) == meta_hypes['solver']['max_steps']:
             # write checkpoint to disk
-
             logging.info('Running Evaluation Scripts.')
             for model in models:
                 eval_dict, images = submodules[model]['eval'].evaluate(
@@ -306,25 +313,30 @@ def run_united_training(meta_hypes, subhypes, submodules, subgraph, tv_sess,
                     subgraph[model]['inf_out'])
 
                 train._write_images_to_summary(images, summary_writer, step)
-
                 if images is not None and len(images) > 0:
-
+                    #get the name of the image
                     name = str(n % 10) + '_' + images[0][0]
+                    #image directory
                     image_dir = subhypes[model]['dirs']['image_dir']
+                    #image file name
                     image_file = os.path.join(image_dir, name)
+                    #save the image
                     scp.misc.imsave(image_file, images[0][1])
                     n = n + 1
 
                 logging.info("%s Evaluation Finished. Results" % model)
 
                 logging.info('Raw Results:')
+                #print evaluation result
                 utils.print_eval_dict(eval_dict, prefix='(raw)   ')
+                #write the evalutation summary
                 train._write_eval_dict_to_summary(
                     eval_dict, 'Evaluation/%s/raw' % model,
                     summary_writer, step)
-
+                
                 logging.info('Smooth Results:')
                 names, res = zip(*eval_dict)
+                #smoothing image
                 smoothed = py_smoothers[model].update_weights(res)
                 eval_dict = zip(names, smoothed)
                 utils.print_eval_dict(eval_dict, prefix='(smooth)')
@@ -334,6 +346,7 @@ def run_united_training(meta_hypes, subhypes, submodules, subgraph, tv_sess,
 
                 if step % image_iter == 0 and step > 0 or \
                         (step + 1) == meta_hypes['solver']['max_steps']:
+                        #save the image
                     train._write_images_to_disk(meta_hypes, images, step)
             logging.info("Evaluation Finished. All results will be saved to:")
             logging.info(subhypes[model]['dirs']['output_dir'])
@@ -352,23 +365,32 @@ def run_united_training(meta_hypes, subhypes, submodules, subgraph, tv_sess,
             start_time = time.time()
     return
 
-
+l#oss function as the sum
+#of the loss functions for classification, segmentation and detection.
 def _recombine_2_losses(meta_hypes, subgraph, subhypes, submodules):
+    #if the hypes specified recombine
     if meta_hypes['loss_build']['recombine']:
         # Computing weight loss
+        #crossentropy loss for segmentation
         segmentation_loss = subgraph['segmentation']['losses']['xentropy']
+        #sum of two losses for detection
         detection_loss = subgraph['detection']['losses']['loss']
-
+        # losses collected during graph construction
         reg_loss_col = tf.GraphKeys.REGULARIZATION_LOSSES
         weight_loss = tf.add_n(tf.get_collection(reg_loss_col),
                                name='reg_loss')
-
+        #if weighted is assigned with the true value in hypes, then losses are weighted
         if meta_hypes['loss_build']['weighted']:
+            #get the weights
             w = meta_hypes['loss_build']['weights']
+            #0.7,2, 0.7 
+            #calculate the total loss
             total_loss = segmentation_loss*w[0] + \
                 detection_loss*w[1] + weight_loss
             subgraph['segmentation']['losses']['total_loss'] = total_loss
+        #if weighted is assigned with the false value in hypes, then losses are calculated without weights
         else:
+            #total loss is summation of all 3 losses
             total_loss = segmentation_loss + detection_loss + weight_loss
             subgraph['segmentation']['losses']['total_loss'] = total_loss
 
@@ -382,26 +404,33 @@ def _recombine_2_losses(meta_hypes, subgraph, subhypes, submodules):
             subgraph[model]['train_op'] = optimizer.training(hypes, losses,
                                                              gs, lr)
 
-
+#combining 3 losses
 def _recombine_3_losses(meta_hypes, subgraph, subhypes, submodules):
     if meta_hypes['loss_build']['recombine']:
         # Read all losses
+             
+        #crossentropy loss for segmentation
         segmentation_loss = subgraph['segmentation']['losses']['xentropy']
+        #sum of two losses for detection
         detection_loss = subgraph['detection']['losses']['loss']
         road_loss = subgraph['road']['losses']['loss']
-
+        
+        # losses collected during graph construction
         reg_loss_col = tf.GraphKeys.REGULARIZATION_LOSSES
-
         weight_loss = tf.add_n(tf.get_collection(reg_loss_col),
                                name='reg_loss')
 
         # compute total loss
+        #if weighted is assigned with the true value in hypes, then losses are weighted
         if meta_hypes['loss_build']['weighted']:
+            #get the weights
             w = meta_hypes['loss_build']['weights']
             # use weights
             total_loss = segmentation_loss*w[0] + \
                 detection_loss*w[1] + road_loss*w[2] + weight_loss
+        #if weighted is assigned with the false value in hypes, then losses are calculated without weights
         else:
+            #total loss is summation of all 3 losses
             total_loss = segmentation_loss + detection_loss + road_loss \
                 + weight_loss
 
@@ -417,7 +446,7 @@ def _recombine_3_losses(meta_hypes, subgraph, subhypes, submodules):
             subgraph[model]['train_op'] = optimizer.training(hypes, losses,
                                                              gs, lr)
 
-
+#load multinet model
 def load_united_model(logdir):
     subhypes = {}
     subgraph = {}
@@ -427,14 +456,18 @@ def load_united_model(logdir):
     subgraph['debug_ops'] = {}
 
     first_iter = True
-
+    #load the hypes
     meta_hypes = utils.load_hypes_from_logdir(logdir, subdir="",
                                               base_path='hypes')
+    #get the models from model_list in hypes
     for model in meta_hypes['model_list']:
         subhypes[model] = utils.load_hypes_from_logdir(logdir, subdir=model)
         hypes = subhypes[model]
+        #get the output directory
         hypes['dirs']['output_dir'] = meta_hypes['dirs']['output_dir']
+        #image input directory
         hypes['dirs']['image_dir'] = meta_hypes['dirs']['image_dir']
+        #training data directory
         hypes['dirs']['data_dir'] = meta_hypes['dirs']['data_dir']
         submodules[model] = utils.load_modules_from_logdir(logdir,
                                                            dirname=model,
@@ -443,30 +476,33 @@ def load_united_model(logdir):
         modules = submodules[model]
 
         logging.info("Build %s computation Graph.", model)
+        #build the computational graph
         with tf.name_scope("Queues_%s" % model):
             subqueues[model] = modules['input'].create_queues(hypes, 'train')
 
         logging.info('Building Model: %s' % model)
-
+        #build the model
         subgraph[model] = build_training_graph(hypes,
                                                subqueues[model],
                                                modules,
                                                first_iter)
 
         first_iter = False
-
+    #if model list is having detection and segmentation
     if len(meta_hypes['model_list']) == 2:
+        #call the function to calculate the losses
         _recombine_2_losses(meta_hypes, subgraph, subhypes, submodules)
     else:
         _recombine_3_losses(meta_hypes, subgraph, subhypes, submodules)
 
     hypes = subhypes[meta_hypes['model_list'][0]]
-
+    #using the context manager launch the graph in session
     tv_sess = core.start_tv_session(hypes)
     sess = tv_sess['sess']
     saver = tv_sess['saver']
-
+    #load weights
     cur_step = core.load_weights(logdir, sess, saver)
+    #for each of the models in model list expand the image dimension
     for model in meta_hypes['model_list']:
         hypes = subhypes[model]
         modules = submodules[model]
@@ -474,7 +510,9 @@ def load_united_model(logdir):
 
         with tf.name_scope('Validation_%s' % model):
             tf.get_variable_scope().reuse_variables()
+            #returns the tensor that may be used as handle for feeding a value
             image_pl = tf.placeholder(tf.float32)
+            #expand the shape of the array by inserting new axes in 0th positon
             image = tf.expand_dims(image_pl, 0)
             inf_out = core.build_inference_graph(hypes, modules,
                                                  image=image)
@@ -491,7 +529,7 @@ def load_united_model(logdir):
 
     return meta_hypes, subhypes, submodules, subgraph, tv_sess, cur_step
 
-
+#function to build the united model
 def build_united_model(meta_hypes):
 
     logging.info("Initialize training folder")
@@ -514,11 +552,16 @@ def build_united_model(meta_hypes):
 
         hypes = subhypes[model]
         utils.set_dirs(hypes, subhypes_file)
+        #output directories
         hypes['dirs']['output_dir'] = meta_hypes['dirs']['output_dir']
+        #data directories
         hypes['dirs']['data_dir'] = meta_hypes['dirs']['data_dir']
+        #initialize the training folders
         train.initialize_training_folder(hypes, files_dir=model,
                                          logging=first_iter)
+        #get the image directory from hypes
         meta_hypes['dirs']['image_dir'] = hypes['dirs']['image_dir']
+        #load the modules from hypes
         submodules[model] = utils.load_modules_from_hypes(
             hypes, postfix="_%s" % model)
         modules = submodules[model]
@@ -535,16 +578,20 @@ def build_united_model(meta_hypes):
                                                first_iter)
 
         first_iter = False
-
+    #if model list is having detection and segmentation
     if len(meta_hypes['models']) == 2:
+        #calculate the losses 
         _recombine_2_losses(meta_hypes, subgraph, subhypes, submodules)
+    #if model list is having detection, segmentation and classification
     else:
+        #calculate combined losses
         _recombine_3_losses(meta_hypes, subgraph, subhypes, submodules)
 
     hypes = subhypes[meta_hypes['model_list'][0]]
 
     tv_sess = core.start_tv_session(hypes)
     sess = tv_sess['sess']
+    #for each of the models in model list expand the image dimension
     for model in meta_hypes['model_list']:
         hypes = subhypes[model]
         modules = submodules[model]
@@ -552,7 +599,9 @@ def build_united_model(meta_hypes):
 
         with tf.name_scope('Validation_%s' % model):
             tf.get_variable_scope().reuse_variables()
+            #returns the tensor that may be used as handle for feeding a value
             image_pl = tf.placeholder(tf.float32)
+            #expand the shape of the array by inserting new axes in 0th positon
             image = tf.expand_dims(image_pl, 0)
             inf_out = core.build_inference_graph(hypes, modules,
                                                  image=image)
@@ -563,18 +612,19 @@ def build_united_model(meta_hypes):
         modules['input'].start_enqueuing_threads(hypes, subqueues[model],
                                                  'train', sess)
 
+    #join paths for the output result
     target_file = os.path.join(meta_hypes['dirs']['output_dir'], 'hypes.json')
     with open(target_file, 'w') as outfile:
         json.dump(meta_hypes, outfile, indent=2, sort_keys=True)
 
     return subhypes, submodules, subgraph, tv_sess
 
-
+#main function
 def main(_):
     utils.set_gpus_to_use()
 
     load_weights = tf.app.flags.FLAGS.logdir is not None
-
+    #if weights are found in the directory
     if not load_weights:
         with open(tf.app.flags.FLAGS.hypes, 'r') as f:
             logging.info("f: %s", f)

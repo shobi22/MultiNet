@@ -1,4 +1,4 @@
-"""Download data relevant to train the KittiSeg model."""
+"""Download data relevant to train the model."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -30,45 +30,44 @@ sys.path.insert(1, 'incl')
 # Replace 'http://kitti.is.tue.mpg.de/kitti/?????????.???' by the
 # correct URL.
 
+#vgg15 url
+vgg_url = 'ftp://mi.eng.cam.ac.uk/pub/mttt2/models/vgg16.npy' 
 
-vgg_url = 'ftp://mi.eng.cam.ac.uk/pub/mttt2/models/vgg16.npy'
-
+#files for the training dataset, validation dataset and testing dataset
 copyfiles = ["train_2.idl", "train_3.idl", "train_4.idl",
              "val_2.idl", "val_3.idl", "val_4.idl",
              "train.txt", "val.txt", "testing.txt", "train3.txt", "val3.txt"]
-
+#directories of the models
 copydirs = ["KittiBox", "KittiBox", "KittiBox",
             "KittiBox", "KittiBox", "KittiBox",
             "KittiBox", "KittiBox", "data_road", "data_road", "data_road"]
-
+#downloading files from kitti
 kitti_download_files = ["data_object_image_2.zip", "data_object_label_2.zip",
                         "data_road.zip"]
 
 data_sub_dirs = ["KittiBox", "KittiBox", ""]
 
-
+#function to get the paths
 def get_pathes():
-    """
-    Get location of `data_dir` and `run_dir'.
-
-    Defaut is ./DATA and ./RUNS.
-    Alternativly they can be set by the environoment variabels
-    'TV_DIR_DATA' and 'TV_DIR_RUNS'.
-    """
-
+    
+    #Get location of `data_dir` and `run_dir'. Defaut is ./DATA and ./RUNS.
+    #Alternativly they can be set by the environoment variabels
+    #TV_DIR_DATA' and 'TV_DIR_RUNS'.
     if 'TV_DIR_DATA' in os.environ:
         data_dir = os.path.join(['hypes'], os.environ['TV_DIR_DATA'])
     else:
+        #if data directory doesn't exist create a directory called DATA
         data_dir = "DATA"
 
     if 'TV_DIR_RUNS' in os.environ:
         run_dir = os.path.join(['hypes'], os.environ['TV_DIR_DATA'])
     else:
+        #if runs directory doesn't exist create a directory called RUNS
         run_dir = "RUNS"
 
     return data_dir, run_dir
 
-
+#function to download the data
 def download(url, dest_directory):
     filename = url.split('/')[-1]
     filepath = os.path.join(dest_directory, filename)
@@ -87,19 +86,20 @@ def download(url, dest_directory):
     print()
     return filepath
 
-
+#main function
 def main():
+   
     parser = argparse.ArgumentParser()
     parser.add_argument('--kitti_url', default='', type=str)
     args = parser.parse_args()
 
     kitti_data_url = args.kitti_url
-
+    #get the paths of data and run directory
     data_dir, run_dir = get_pathes()
 
     if not os.path.exists(data_dir):
             os.makedirs(data_dir)
-
+    #path for vgg16
     vgg_weights = os.path.join(data_dir, 'vgg16.npy')
 
     # Download VGG DATA
