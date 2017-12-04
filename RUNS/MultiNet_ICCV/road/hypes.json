@@ -1,0 +1,72 @@
+{
+  "arch": {
+    "deep_channels": 512, 
+    "inner_channels": 30, 
+    "inner_kernel": 3, 
+    "num_channels": 3, 
+    "use_crop": false, 
+    "whitening": false
+  }, 
+  "clip_norm": 1.0, 
+  "data": {
+    "positive_classnames": [
+      "trunk", 
+      "motorway", 
+      "primary"
+    ], 
+    "semantic": true, 
+    "train_file": "classification/train4.txt", 
+    "val_file": "classification/val4.txt"
+  }, 
+  "dirs": {
+    "base_path": "/home/mifs/mttt2/github/MultiNet/submodules/KittiClass/hypes", 
+    "data_dir": "/home/mifs/mttt2/local_disk/rsync/DATA", 
+    "image_dir": "/home/mifs/mttt2/cvfs/RUNS/MultiNet/VGG/l1_b5_b5inner3_multinet3_VGG_2017_03_15_15.29/images", 
+    "output_dir": "/home/mifs/mttt2/cvfs/RUNS/MultiNet/VGG/l1_b5_b5inner3_multinet3_VGG_2017_03_15_15.29"
+  }, 
+  "down_score": 1, 
+  "grid_height": 12, 
+  "grid_width": 39, 
+  "jitter": {
+    "augment_level": 1, 
+    "fix_shape": false, 
+    "flip": false, 
+    "image_height": 384, 
+    "image_width": 1248, 
+    "lower_size": 0.4, 
+    "random_resize": false, 
+    "res_chance": 0.7, 
+    "resize_image": true, 
+    "sig": 0.15, 
+    "upper_size": 1.7
+  }, 
+  "logging": {
+    "display_iter": 40, 
+    "eval_iter": 300, 
+    "image_iter": 10000, 
+    "save_iter": 2000, 
+    "write_iter": 1000
+  }, 
+  "model": {
+    "architecture_file": "../encoder/vgg.py", 
+    "evaluator_file": "../evals/road_eval.py", 
+    "input_file": "../inputs/kitti_input.py", 
+    "objective_file": "../decoder/high_res.py", 
+    "optimizer_file": "../optimizer/generic_optimizer.py"
+  }, 
+  "only_road": true, 
+  "path": [
+    "../incl"
+  ], 
+  "road_classes": 2, 
+  "solver": {
+    "batch_size": 5, 
+    "epsilon": 1e-05, 
+    "learning_rate": 1e-05, 
+    "learning_rate_step": null, 
+    "max_steps": 16000, 
+    "opt": "Adam", 
+    "threads": 4
+  }, 
+  "wd": 0.0005
+}
