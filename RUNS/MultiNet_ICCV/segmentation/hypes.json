@@ -1,0 +1,85 @@
+{
+  "arch": {
+    "fcn_in": "pool5", 
+    "image_size": 50, 
+    "num_channels": 3, 
+    "num_classes": 2, 
+    "weight": [
+      1, 
+      2
+    ], 
+    "whitening": false
+  }, 
+  "clip_norm": 1.0, 
+  "data": {
+    "background_color": [
+      255, 
+      0, 
+      0
+    ], 
+    "kitti_url": "", 
+    "road_color": [
+      255, 
+      0, 
+      255
+    ], 
+    "train_file": "data_road/train3.txt", 
+    "val_file": "data_road/val3.txt", 
+    "vgg_url": "https://dl.dropboxusercontent.com/u/50333326/vgg16.npy"
+  }, 
+  "dirs": {
+    "base_path": "/home/mifs/mttt2/github/MultiNet/submodules/KittiSeg/hypes", 
+    "data_dir": "/home/mifs/mttt2/local_disk/rsync/DATA", 
+    "image_dir": "/home/mifs/mttt2/cvfs/RUNS/MultiNet/VGG/l1_b5_b5inner3_multinet3_VGG_2017_03_15_15.29/images", 
+    "output_dir": "/home/mifs/mttt2/cvfs/RUNS/MultiNet/VGG/l1_b5_b5inner3_multinet3_VGG_2017_03_15_15.29"
+  }, 
+  "jitter": {
+    "augment_level": 1, 
+    "crop_chance": 0.8, 
+    "crop_patch": false, 
+    "fix_shape": false, 
+    "image_height": 384, 
+    "image_width": 1248, 
+    "lower_size": 0.4, 
+    "max_crop": 32, 
+    "patch_height": 256, 
+    "patch_width": 256, 
+    "random_crop": true, 
+    "random_resize": false, 
+    "res_chance": 0.4, 
+    "reseize_image": true, 
+    "sig": 0.15, 
+    "upper_size": 1.7
+  }, 
+  "logging": {
+    "display_iter": 50, 
+    "eval_iter": 250, 
+    "image_iter": 20000, 
+    "save_iter": 2000, 
+    "write_iter": 250
+  }, 
+  "loss": "xentropy", 
+  "model": {
+    "architecture_file": "../encoder/fcn8_vgg.py", 
+    "evaluator_file": "../evals/kitti_eval.py", 
+    "input_file": "../inputs/kitti_seg_input.py", 
+    "objective_file": "../decoder/fcn.py", 
+    "optimizer_file": "../optimizer/generic_optimizer.py"
+  }, 
+  "path": [
+    "../incl"
+  ], 
+  "scale_down": 0.01, 
+  "solver": {
+    "adam_eps": 1e-05, 
+    "batch_size": 1, 
+    "epsilon": 1e-09, 
+    "learning_rate": 1e-05, 
+    "learning_rate_step": null, 
+    "max_steps": 12000, 
+    "opt": "Adam", 
+    "threads": 4
+  }, 
+  "use_fc_wd": true, 
+  "wd": 0.0005
+}
