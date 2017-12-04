@@ -46,10 +46,11 @@ import time
 
 from PIL import Image, ImageDraw, ImageFont
 
-
+#Implementation of the flags interface.
+#flags are used to parse command line arguments and hold input parameters
 flags = tf.app.flags
 FLAGS = flags.FLAGS
-
+#insert incl directory at the first position
 sys.path.insert(1, 'incl')
 
 try:
@@ -64,7 +65,7 @@ except ImportError:
                   "'git submodule update --init --recursive'")
     exit(1)
 
-
+#define string flags
 flags.DEFINE_string('logdir', None,
                     'Path to logdir.')
 flags.DEFINE_string('input', None,
@@ -72,12 +73,14 @@ flags.DEFINE_string('input', None,
 flags.DEFINE_string('output', None,
                     'Image to apply KittiSeg.')
 
-
+#submodules
 default_run = 'MultiNet_ICCV'
+#vgg16.py weights
 weights_url = ("ftp://mi.eng.cam.ac.uk/"
                "pub/mttt2/models/MultiNet_ICCV.zip")
 
-
+#if runs_dir or login_dir is not exit weights have to be downloaded
+#then extract the weight zip files
 def maybe_download_and_extract(runs_dir):
     logdir = os.path.join(runs_dir, default_run)
 
@@ -93,52 +96,63 @@ def maybe_download_and_extract(runs_dir):
     download_name = tv_utils.download(weights_url, runs_dir)
 
     logging.info("Extracting MultiNet_pretrained.zip")
-
+    #extract the zip file
     zipfile.ZipFile(download_name, 'r').extractall(runs_dir)
 
     return
 
-
+#function to resize the image using scipy
 def resize_label_image(image, gt_image, image_height, image_width):
+    #using cubic interpolation
     image = scp.misc.imresize(image, size=(image_height, image_width),
                               interp='cubic')
     shape = gt_image.shape
+    #using nearest neighbour interpolation
     gt_image = scp.misc.imresize(gt_image, size=(image_height, image_width),
                                  interp='nearest')
 
     return image, gt_image
 
-
+#function to generate the output
 def _output_generator(sess, tensor_list, image_pl, data_file,
                       process_image=lambda x: x):
     image_dir = os.path.dirname(data_file)
     with open(data_file) as file:
         for datum in file:
-            datum = datum.rstrip()
-            image_file = datum.split(" ")[0]
+            datum = datum.rstrip() #strip
+            image_file = datum.split(" ")[0] #get the name of the file by getting the first string before space
+            #new  file name is combination of path of the image directory and name of image file
             image_file = os.path.join(image_dir, image_file)
-
+            #read the image
             image = scp.misc.imread(image_file)
-
+            #call the function process_image (resizing the image)
             image = process_image(image)
 
             feed_dict = {image_pl: image}
             start_time = time.time()
             output = sess.run(tensor_list, feed_dict=feed_dict)
+            #return the result as objects
             yield image_file, output
 
-
+#function to calculate the evaluation run time
 def eval_runtime(sess, subhypes, image_pl, eval_list, data_file):
     logging.info(' ')
     logging.info('Evaluation complete. Measuring runtime.')
+    #image file directory
     image_dir = os.path.dirname(data_file)
+    #remove any unwanted spaces at the end of the filename
     with open(data_file) as file:
         for datum in file:
             datum = datum.rstrip()
+    #get the name of image file - first part
     image_file = datum.split(" ")[0]
+    #path name of the file by combining with image directory
     image_file = os.path.join(image_dir, image_file)
+    #read the image
     image = scp.misc.imread(image_file)
+    #resize the image by calling the function as specified height and width in hypes
     image = process_image(subhypes, image)
+    #calculating the evaluation running time
     feed = {image_pl: image}
     for i in xrange(100):
         _ = sess.run(eval_list, feed_dict=feed)
@@ -148,22 +162,25 @@ def eval_runtime(sess, subhypes, image_pl, eval_list, data_file):
     dt = (time.time() - start_time)/100
     logging.info('Joined inference can be conducted at the following rates on'
                  ' your machine:')
+    #evaluation time in milli seconds
     logging.info('Speed (msec): %f ', 1000*dt)
+    #output in frames per seconds
     logging.info('Speed (fps): %f ', 1/dt)
     return dt
 
-
+# function to test whether all the input images are same resolution
 def test_constant_input(subhypes):
-    road_input_conf = subhypes['road']['jitter']
+    #jitters in classification, segmentaion and detection
+    road_input_conf = subhypes['road']['jitter'] 
     seg_input_conf = subhypes['segmentation']['jitter']
     car_input_conf = subhypes['detection']
-
+    #check the height and width specified in all 3 parts are same
     gesund = True \
         and road_input_conf['image_width'] == seg_input_conf['image_width'] \
         and road_input_conf['image_height'] == seg_input_conf['image_height'] \
         and car_input_conf['image_width'] == seg_input_conf['image_width'] \
         and car_input_conf['image_height'] == seg_input_conf['image_height'] \
-
+    # if resoltions are not same pass the error message
     if not gesund:
         logging.error("The different tasks are training"
                       "using different resolutions. Please retrain all tasks,"
@@ -171,9 +188,11 @@ def test_constant_input(subhypes):
         exit(1)
     return
 
-
+# function to test the image file for the segmentation 
+#if the images are trained with resize capability, then evaluation has to be done by resizing images
+#otherwise, this method will pass the message to train the model alternatively without resizing.
 def test_segmentation_input(subhypes):
-
+    #if resize_image is false in hypes pass the error message
     if not subhypes['segmentation']['jitter']['reseize_image']:
         logging.error('')
         logging.error("Issue with Segmentation input handling.")
@@ -195,21 +214,24 @@ def test_segmentation_input(subhypes):
         exit(1)
     return
 
-
+# function to apply the text of classification result on top of the image
 def road_draw(image, highway):
+    #convert the image as an array
     im = Image.fromarray(image.astype('uint8'))
+    #draw image
     draw = ImageDraw.Draw(im)
-
+    #get the font type
     fnt = ImageFont.truetype('FreeMono/FreeMonoBold.ttf', 40)
-
+    #shape of the image
     shape = image.shape
-
+    #if the road is detected as highway on top of the image draw the text as highway
     if highway:
         draw.text((65, 10), "Highway",
                   font=fnt, fill=(255, 255, 0, 255))
 
         draw.ellipse([10, 10, 55, 55], fill=(255, 255, 0, 255),
                      outline=(255, 255, 0, 255))
+    # if it is detected as small road, on top of the image draw the text as minor road
     else:
         draw.text((65, 10), "minor road",
                   font=fnt, fill=(255, 0, 0, 255))
@@ -219,21 +241,23 @@ def road_draw(image, highway):
 
     return np.array(im).astype('float32')
 
-
+#function to process the image - resizing the image
 def process_image(subhypes, image):
     hypes = subhypes['road']
     shape = image.shape
+    # resize the input only if specified in hypes
     image_height = hypes['jitter']['image_height']
     image_width = hypes['jitter']['image_width']
+    #assertion error exception will occur if image height or width specified is less than the original image's height and width
     assert(image_height >= shape[0])
     assert(image_width >= shape[1])
-
+    #image resizing using cubic interpolation
     image = scp.misc.imresize(image, (image_height,
                                       image_width, 3),
                               interp='cubic')
     return image
 
-
+# function to load the MultiNet model
 def load_united_model(logdir):
     subhypes = {}
     subgraph = {}
@@ -241,9 +265,10 @@ def load_united_model(logdir):
     subqueues = {}
 
     first_iter = True
-
+    #load the hypes from login directory
     meta_hypes = tv_utils.load_hypes_from_logdir(logdir, subdir="",
                                                  base_path='hypes')
+    #for all the models in meta-hypes get the directory of output and input images
     for model in meta_hypes['models']:
         subhypes[model] = tv_utils.load_hypes_from_logdir(logdir, subdir=model)
         hypes = subhypes[model]
@@ -256,19 +281,23 @@ def load_united_model(logdir):
         modules = submodules[model]
 
     image_pl = tf.placeholder(tf.float32)
+    #expand the shape of the array by inserting new axes in 0th positon
     image = tf.expand_dims(image_pl, 0)
+    #set the shape of an array
     image.set_shape([1, 384, 1248, 3])
     decoded_logits = {}
+    #for all the models in hypes
     for model in meta_hypes['models']:
-        hypes = subhypes[model]
+        hypes = subhypes[model] #get the model
         modules = submodules[model]
-        optimizer = modules['solver']
-
+        optimizer = modules['solver'] # solver- max steps of iteration and batch size and etc
+        #This context manager validates that the given values are from the same graph, makes that graph the default graph, 
+        #and pushes a name scope in that graph
         with tf.name_scope('Validation_%s' % model):
             reuse = {True: False, False: True}[first_iter]
-
+            #Returns the current variable scope.
             scope = tf.get_variable_scope()
-
+            #variable created here will be named as currentvariable and variables are not shared
             with tf.variable_scope(scope, reuse=reuse):
                 logits = modules['arch'].inference(hypes, image, train=False)
 
@@ -276,16 +305,19 @@ def load_united_model(logdir):
                                                                  train=False)
 
         first_iter = False
+    #using the context manager launch the graph in session
     sess = tf.Session()
+    #saves and restores variables
     saver = tf.train.Saver()
+    #loads the weights of the model from a HDF5 file
     cur_step = core.load_weights(logdir, sess, saver)
 
     return meta_hypes, subhypes, submodules, decoded_logits, sess, image_pl
 
-
+#main function
 def main(_):
     tv_utils.set_gpus_to_use()
-
+    #if input is not given pass the error message
     if FLAGS.input is None:
         logging.error("No input was given.")
         logging.info(
@@ -293,7 +325,8 @@ def main(_):
             "[--output_image output_image] [--logdir /path/to/weights] "
             "[--gpus GPUs_to_use] ")
         exit(1)
-
+    
+    #if log directory is empty
     if FLAGS.logdir is None:
         # Download and use weights from the MultiNet Paper
         if 'TV_DIR_RUNS' in os.environ:
@@ -301,6 +334,7 @@ def main(_):
                                     'MultiNet')
         else:
             runs_dir = 'RUNS'
+        #call the function to extract and download the weights
         maybe_download_and_extract(runs_dir)
         logdir = os.path.join(runs_dir, default_run)
     else:
@@ -315,11 +349,11 @@ def main(_):
     # Create list of relevant tensors to evaluate
     meta_hypes, subhypes, submodules, decoded_logits, sess, image_pl = load_out
 
-    seg_softmax = decoded_logits['segmentation']['softmax']
-    pred_boxes_new = decoded_logits['detection']['pred_boxes_new']
-    pred_confidences = decoded_logits['detection']['pred_confidences']
+    seg_softmax = decoded_logits['segmentation']['softmax'] #softmax in segmentation
+    pred_boxes_new = decoded_logits['detection']['pred_boxes_new'] #rough bounding boxes in detecgtion
+    pred_confidences = decoded_logits['detection']['pred_confidences'] #confidence level in detection
     if len(meta_hypes['model_list']) == 3:
-        road_softmax = decoded_logits['road']['softmax'][0]
+        road_softmax = decoded_logits['road']['softmax'][0] #softmax in classification
     else:
         road_softmax = None
 
@@ -331,15 +365,16 @@ def main(_):
 
     # Load and reseize Image
     image_file = FLAGS.input
+    #read the image
     image = scp.misc.imread(image_file)
-
+    #resizing the image in classification
     hypes_road = subhypes['road']
     shape = image.shape
     image_height = hypes_road['jitter']['image_height']
     image_width = hypes_road['jitter']['image_width']
     assert(image_height >= shape[0])
     assert(image_width >= shape[1])
-
+    #resizing using cubic interpolation
     image = scp.misc.imresize(image, (image_height,
                                       image_width, 3),
                               interp='cubic')
@@ -355,7 +390,8 @@ def main(_):
     # Create Segmentation Overlay
     shape = image.shape
     seg_softmax = seg_softmax[:, 1].reshape(shape[0], shape[1])
-    hard = seg_softmax > 0.5
+    # if the segmentaion confidence more than 0.5 it is considered as hard softmax
+    hard = seg_softmax > 0.5 
     overlay_image = tv_utils.fast_overlay(image, hard)
 
     # Draw Detection Boxes
