@@ -1,0 +1,53 @@
+{
+  "dirs": {
+    "base_path": "/home/mifs/mttt2/github/MultiNet/hypes", 
+    "data_dir": "/home/mifs/mttt2/local_disk/rsync/DATA", 
+    "image_dir": "/data/cvfs/mttt2/RUNS/ICCV/MultiNet/MultiNet_ICCV/images", 
+    "output_dir": "/data/cvfs/mttt2/RUNS/ICCV/MultiNet/MultiNet_ICCV"
+  }, 
+  "logging": {
+    "display_iter": 50, 
+    "eval_iter": 1000, 
+    "image_iter": 600000, 
+    "save_iter": 5000, 
+    "write_iter": 1000
+  }, 
+  "loss_build": {
+    "recombine": true, 
+    "weighted": false, 
+    "weights": [
+      0.7, 
+      2, 
+      0.7
+    ]
+  }, 
+  "model_list": [
+    "segmentation", 
+    "detection", 
+    "road"
+  ], 
+  "models": {
+    "detection": "../submodules/KittiBox/hypes/kittiBox.json", 
+    "road": "../submodules/KittiClass/hypes/KittiClass_VGG.json", 
+    "segmentation": "../submodules/KittiSeg/hypes/KittiVGG.json"
+  }, 
+  "path": [
+    "../incl", 
+    "../submodules/KittiSeg/incl", 
+    "../submodules/KittiBox/incl/", 
+    "../submodules/KittiClass/incl/"
+  ], 
+  "selection": {
+    "random": false, 
+    "use_weights": true, 
+    "weights": [
+      1, 
+      0, 
+      0
+    ]
+  }, 
+  "solver": {
+    "batch_size": 1, 
+    "max_steps": 100000
+  }
+}
