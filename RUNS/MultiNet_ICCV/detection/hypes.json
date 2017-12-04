@@ -1,0 +1,81 @@
+{
+  "arch": {
+    "deep_feat": "pool5"
+  }, 
+  "augment_level": 1, 
+  "batch_size": 5, 
+  "biggest_box_px": 10000, 
+  "clip_norm": 1.0, 
+  "data": {
+    "eval_cmd": "../submodules/KittiObjective2/./evaluate_object2", 
+    "label_dir": "KittiBox/training/label_2", 
+    "train_file": "KittiBox/train.txt", 
+    "truncate_data": false, 
+    "val_file": "KittiBox/val.txt"
+  }, 
+  "detect_truck": false, 
+  "dirs": {
+    "base_path": "/home/mifs/mttt2/github/MultiNet/submodules/KittiBox/hypes", 
+    "data_dir": "/home/mifs/mttt2/local_disk/rsync/DATA", 
+    "image_dir": "/home/mifs/mttt2/cvfs/RUNS/MultiNet/VGG/l1_b5_b5inner3_multinet3_VGG_2017_03_15_15.29/images", 
+    "output_dir": "/home/mifs/mttt2/cvfs/RUNS/MultiNet/VGG/l1_b5_b5inner3_multinet3_VGG_2017_03_15_15.29"
+  }, 
+  "early_feat_channels": 256, 
+  "focus_size": 1.8, 
+  "grid_height": 12, 
+  "grid_width": 39, 
+  "image_height": 384, 
+  "image_width": 1248, 
+  "logging": {
+    "display_iter": 200, 
+    "eval_iter": 2000, 
+    "image_iter": 10000, 
+    "save_iter": 2000, 
+    "write_iter": 800
+  }, 
+  "model": {
+    "architecture_file": "../encoder/vgg.py", 
+    "evaluator_file": "../evals/kitti_eval.py", 
+    "input_file": "../inputs/kitti_input.py", 
+    "objective_file": "../decoder/fastBox.py", 
+    "optimizer_file": "../optimizer/generic_optimizer.py"
+  }, 
+  "num_classes": 2, 
+  "num_inner_channel": 500, 
+  "path": [
+    "../incl"
+  ], 
+  "region_size": 32, 
+  "rezoom_change_loss": "center", 
+  "rezoom_h_coords": [
+    -0.25, 
+    0, 
+    0.25
+  ], 
+  "rezoom_w_coords": [
+    -0.25, 
+    0, 
+    0.25
+  ], 
+  "scale_down": 0.1, 
+  "solver": {
+    "batch_size": 1, 
+    "epsilon": 1e-05, 
+    "head_weights": [
+      1.0, 
+      0.1
+    ], 
+    "hungarian_iou": 0.35, 
+    "learning_rate": 1e-05, 
+    "learning_rate_step": null, 
+    "max_steps": 140000, 
+    "opt": "Adam", 
+    "rnd_seed": 1, 
+    "use_jitter": true, 
+    "weights": ""
+  }, 
+  "tau": 0.35, 
+  "use_mask": true, 
+  "use_rezoom": true, 
+  "wd": 0.0005
+}
